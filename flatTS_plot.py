@@ -6,9 +6,12 @@ import os
 import socket
 import argparse
 import logging
+import datetime
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
+from matplotlib.dates import MonthLocator, DayLocator, DateFormatter
+from matplotlib.ticker import MultipleLocator, FormatStrFormatter
 
 
 class Plot():
@@ -34,7 +37,7 @@ class Plot():
             "hspace": 0.03,
             }
         fig, ax = plt.subplots(figsize=(8,8), nrows=Ntabs, ncols=2, 
-                               sharex="col", sharey=False, 
+                               sharex="col", sharey="row", 
                                gridspec_kw=gspec_dict)
         for idx, filename in enumerate(self.tabs["path"]):
             res = np.load(filename, mmap_mode="r", allow_pickle=True)
@@ -46,8 +49,33 @@ class Plot():
                 logging.error("Non-unique band for {0}".format(filename))
             # Change from statistics normalized value to values around 0
             vary = res["mean"] - 1. 
-            ax[idx, 0].scatter(res["nite_img"], vary, s=10, 
-                               c=res["nite_ref"], label=band)
+            # Time axis
+            days4 = DayLocator(interval=4)
+            days = DayLocator()
+            dateFmt = DateFormatter("%b/%d/%y")
+            months2 = MonthLocator()
+            days2 = DayLocator()
+            dateFmt2 = DateFormatter("%b/%d/%y")
+            xdate = [datetime.datetime.strptime(str(date), "%Y%m%d")
+                     for date in np.sort(res["nite_img"])]
+            #
+            ax[idx, 0].scatter(xdate, vary, s=10, 
+                               c=res["nite_ref"], cmap="plasma", label=band)
+            ax[idx, 0].xaxis.set_major_locator(days4)
+            ax[idx, 0].xaxis.set_major_formatter(dateFmt)
+            ax[idx, 0].xaxis.set_minor_locator(days)
+            ax[idx, 0].autoscale_view()
+            kw_grid0 = { 
+                "color": "lightgray",
+                "linestyle": "dotted",
+                "dash_capstyle": "round",
+                "alpha": 0.7,}
+            ax[idx, 0].grid(**kw_grid0)
+            xlabels_ax0 = ax[idx, 0].get_xticklabels()
+            plt.setp(xlabels_ax0, rotation=30, fontsize=10)
+            ndays = datetime.timedelta(days=2)
+            ax[idx, 0].set_xlim([xdate[0] - ndays, xdate[-1] + ndays])
+            #
             handles, labels = ax[idx, 0].get_legend_handles_labels()
             ax[idx, 0].legend(handles, labels,
                               loc="upper left", ncol=1, fontsize=10,
