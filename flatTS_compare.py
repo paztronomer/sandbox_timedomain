@@ -84,7 +84,17 @@ class Compare():
         # ratio, bad = [], []
         res = []
         T = Toolbox()
-        for im in self.im["fullpath"]:
+        # In case of 1-element
+        if (self.im.ndim == 0):
+            im_path_aux = list([str(self.im["fullpath"])])
+        else:
+            im_path_aux = self.im["fullpath"]
+        if (self.ref.ndim == 0):
+            ref_path_aux = list([str(self.ref["fullpath"])])
+        else:
+            ref_path_aux = self.ref["fullpath"]
+        #
+        for im in im_path_aux:
             # Folder and filename
             folder_im, fnm_im = T.split_path(im)
             # Load data
@@ -101,7 +111,7 @@ class Compare():
                 flag_norm = "mean"
             else:
                 flag_norm = "none"
-            for ref in self.ref["fullpath"]:
+            for ref in ref_path_aux:
                 # Folder and filename for reference
                 folder_ref, fnm_ref = T.split_path(ref)
                 if (im == ref):
