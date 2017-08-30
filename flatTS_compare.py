@@ -3,6 +3,7 @@ against the images in the benchmark list
 """
 
 import os
+import errno
 import socket
 import time
 import argparse
@@ -69,12 +70,14 @@ class LoadFITS():
 
 
 class Compare():
-    def __init__(self, images=None, reference=None, norm=None, outfile=None):
+    def __init__(self, images=None, reference=None, norm=None, outfile=None,
+                 combine=None):
         kw = {"dtype":np.dtype([('fullpath', 'S200')])}
         self.im = np.genfromtxt(images, **kw)
         self.ref = np.genfromtxt(reference, **kw)
         self.norm = norm
         self.outnm = outfile
+        self.combine = combine
 
     def compare_wimg(self):
         """ Iteratively compare a set of weighted images to the set of 
@@ -111,7 +114,7 @@ class Compare():
                 flag_norm = "mean"
             else:
                 flag_norm = "none"
-            for ref in ref_path_aux:
+            for idx, ref in enumerate(ref_path_aux):
                 # Folder and filename for reference
                 folder_ref, fnm_ref = T.split_path(ref)
                 if (im == ref):
@@ -125,6 +128,14 @@ class Compare():
                     xref /= np.mean(xref)
                 xref_h = fp_bin.header
                 del fp_bin 
+                # If combine flag was set, then get a median image per set of 
+                # compared images
+                if self.combine:
+                    if (idx == 0):
+                        X = xdata / xref
+                    else:
+                        X_tmp = xdata / xref
+                        X = np.dstack((X, X_tmp))
                 s = self.get_stat(xdata, xref)
                 # Include description of compared data
                 # IMG, REF, NORM 
@@ -142,6 +153,36 @@ class Compare():
                 # ratio.append(s[0])
                 # if ((s[0] > 1.05) or (s[0] < 0.95)):
                 #    bad.append(s[0])
+            if self.combine:
+                # Create the combined image per set of comparisons
+                stat2use = np.median
+                Xres = self.stat_cube(X, (lambda: stat2use)())
+                # And save as FITS
+                self.dir_combine = os.path.join(os.getcwd(), "combined/") 
+                try:
+                    os.makedirs(self.dir_combine)
+                except OSError as exception:
+                    if (exception.errno != errno.EEXIST):
+                        raise
+                        logging.error("Error creating combined folder")
+                relroot_im, fname_im = os.path.split(im)
+                relroot_ref, fname_ref = os.path.split(ref)
+                # Assume the filenames have the same format:
+                # <some_prefix>_wimg_<nite>_<band>_pixcorMedN.fits
+                m = "Assuming filenames as"
+                m += " <some_prefix>_wimg_<nite>_<band>_pixcorMedN.fits"
+                logging.warning(m)
+                a1 = fname_im[: fname_im.find("_")]
+                b1 = fname_ref[: fname_ref.find("_")]
+                p1 = fname_im.find("wimg_") + 5
+                p2 = fname_im.find("_pixcor")
+                a2_nite_band = fname_im[p1 : p2] 
+                outfnm = a1 + "_" + b1 + "_" + a2_nite_band + "_combined.fits"
+                outfnm = os.path.join(self.dir_combine, outfnm)
+                fits_comb = fitsio.FITS(outfnm, "rw")
+                fits_comb.write(Xres)
+                fits_comb[-1].write_checksum()
+                fits_comb.close()
         # bad = np.array(bad)
         # ratio = np.array(ratio)
         # remove nan
@@ -180,6 +221,20 @@ class Compare():
         s8 = scipy.stats.entropy(tmp.ravel())
         return [s1, s2, s3, s4, s5, s6, s7, s8]
 
+    def stat_cube(self, arr3, f):
+        """ FROM: flatTS_weighted.py
+        Receives a data cube (3D array) and performs the given statistics
+        over the third dimension, pixel by pixel
+        Uses numpy iteration tools
+        """
+        out = np.zeros_like(arr3[:, :, 0])
+        it = np.nditer(arr3[:, :, 0], flags=["multi_index"])
+        while not it.finished:
+            i1, i2 = it.multi_index
+            out[i1, i2] = f(arr3[i1, i2, :])
+            it.iternext()
+        return out
+
 
 if __name__ == "__main__":
     print socket.gethostname()
@@ -201,12 +256,17 @@ if __name__ == "__main__":
     h4 += " Default is not normalization"
     aft.add_argument("--norm", help=h4, metavar="")
     #
+    h5 = "Wheter to create a median image for each set of comparison"
+    h5 += " \'image vs reference\'."
+    aft.add_argument("--combine", help=h5, action="store_true")
+    #
     val = aft.parse_args()
     kw = dict()
     kw["images"] = val.imlist
     kw["reference"] = val.imref
     kw["outfile"] = val.out
     kw["norm"] = val.norm
+    kw["combine"] = val.combine
     #
     C = Compare(**kw)
     #
