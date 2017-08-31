@@ -35,11 +35,6 @@ if False:
     ch.setFormatter(formatter)
     logger.addHandler(ch)
 
-# ToDo:
-# 1) compare suoercal against supercal. Get statistics
-# 2) compare available pixcor_binned_fp against supercal. Get statistics
-# 3 ) make plots in this code, quick assessment
-#
 # PENDING:
 # 1) if compare sets of images not being weighted images, get the
 # flag from the header
@@ -96,6 +91,12 @@ class Compare():
             ref_path_aux = list([str(self.ref["fullpath"])])
         else:
             ref_path_aux = self.ref["fullpath"]
+        #
+
+        #
+        # The outer region has values of -1. So I has some options... do not
+        # use negative values for data_cube or to use masked array
+        #
         #
         for im in im_path_aux:
             # Folder and filename
