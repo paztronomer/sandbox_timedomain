@@ -70,6 +70,7 @@ class Construct():
         # a weighted image per night
         for b in band:
             for idx,n in enumerate(nite):
+                flag_norm = "none"
                 print b, n
                 auxsel = self.df_ben[(self.df_ben["band"]==b) & 
                                      (self.df_ben["nite"]==n)]
@@ -91,10 +92,14 @@ class Construct():
                         else:
                             auxfnm = os.path.join(pth, fnm)
                         M = FPBinned(auxfnm).data
+                        # Mask the array, to get the real value to normalize
+                        M_msk = np.ma.masked_where(M == -1, M, copy=True)
                         if (self.norm == 0):
-                            M /= np.median(M)
+                            M_msk /= np.ma.median(M_msk)
+                            flag_norm = "median"
                         elif (self.norm == 1):
-                            M /= np.mean(M)
+                            M_msk /= np.ma.mean(M_msk)
+                            flag_norm = "mean"
                         #============================
                         #for compare_dflat_binned_fp
                         #must remove the median norm
@@ -107,18 +112,19 @@ class Construct():
                         else:
                             auxfnm = os.path.join(pth, fnm)
                         N = FPBinned(auxfnm).data
+                        N_msk = np.ma.masked_where(N == -1, N, copy=True)
                         if (self.norm == 0):
-                            N /= np.median(N)
+                            N_msk /= np.ma.median(N_msk)
                         elif (self.norm == 1):
-                            N /= np.mean(N)
+                            N_msk /= np.ma.mean(N_msk)
                         #============================
                         #for compare_dflat_binned_fp
                         #must remove the median norm
                         #============================
-                        M = np.dstack((M,N))
+                        M_msk = np.ma.dstack((M_msk, N_msk))
                 # Call the weighted images method
-                M_w = self.stat_cube(M, (lambda: stat)())
-                # Check/crete the destination folder
+                M_w = self.stat_cube(M_msk, (lambda: stat)())
+                # Check/create the destination folder
                 if (self.dir_wimg is None):
                     self.dir_wimg = os.path.join(os.getcwd(), "weighted/") 
                 try:
@@ -141,28 +147,42 @@ class Construct():
                 logging.info("Saving weighted image: {0}".format(outpath))
                 print "Saving weighted image: {0}".format(outpath)
                 #
-                # Here save information on the header! Example: range of
-                # nights, set of expnums used for generate it, band, 
-                # pfw_attempt for the processed images, etc
-                #
                 fits = fitsio.FITS(outpath, "rw")
-                fits.write(M_w)
+                # Add information to the header
+                h1 = dict()
+                h1["name"] = "NITE"
+                h1["value"] = n
+                h1["comment"] = "Night for which weighted image was generated"
+                h2 = dict()
+                h2["name"] = "BAND"
+                h2["value"] = b
+                h3 = dict()
+                h3["name"] = "GROUP"
+                h3["value"] = self.prefix
+                h3["comment"] = "Set of binned FP pixcor images"
+                h4 = dict()
+                h4["name"] = "NORM"
+                h4["value"] = flag_norm
+                h4["comment"] = "Normalization per image median, mean or none"
+                fits.write(M_w, header=[h1, h2, h3, h4])
                 fits[-1].write_checksum()
                 fits.close()
         return True
 
-    def stat_cube(self,arr3,f):
-        '''Receives a data cube (3D array) and performs the given statistics
+    def stat_cube(self, arr3, f):
+        """Receives a data cube (3D array) and performs the given statistics
         over the third dimension, pixel by pixel
         Uses numpy iteration tools
-        '''
+        """
+        # Here arr[:, :, 0] is the first stacked array
         out = np.zeros_like(arr3[:, :, 0])
-        it = np.nditer(arr3[:, :, 0], flags=['multi_index'])
+        it = np.nditer(arr3[:, :, 0], flags=["multi_index"])
         while not it.finished:
             i1, i2 = it.multi_index
             out[i1, i2] = f(arr3[i1, i2, :])
             it.iternext()
         return out
+
 
 if __name__ == "__main__":
     #
