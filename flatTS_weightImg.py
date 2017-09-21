@@ -66,7 +66,7 @@ class Construct():
         band = band["band"]
         nite = self.df_ben.drop_duplicates(subset=["nite"], inplace=False)
         nite = nite["nite"]
-        # Iterate over band for the entrire available data range, creating
+        # Iterate over band for the entire available data range, creating
         # a weighted image per night
         for b in band:
             for idx,n in enumerate(nite):
@@ -139,7 +139,7 @@ class Construct():
                                                          row["band"], 
                                                          self.suffix)
                 else:
-                    fnm = "{0}_wimg_{1}_{2}_{3}.fits".format(self.prefix, 
+                    fnm = "{0}_{1}_{2}_{3}.fits".format(self.prefix, 
                                                              row["nite"], 
                                                              row["band"], 
                                                              self.suffix)
@@ -186,7 +186,9 @@ class Construct():
 
 if __name__ == "__main__":
     #
-    print "Running on {0}".format(socket.gethostname())
+    logging.basicConfig(filename=logpath, level=logging.DEBUG, 
+                        format="%(asctime)s - %(levelname)s - %(message)s")
+    logging.info("Running on {0}".format(socket.gethostname()))
     #
     h = "Code to create weighted images, per night, per band."
     bow = argparse.ArgumentParser(description=h)
@@ -197,8 +199,8 @@ if __name__ == "__main__":
     bow.add_argument("benchmark", help=txt2)
     #
     # Optional
-    txt3 = "Prefix for the benchmark set weighted outputimages. If no value,"
-    txt3 += " images will start with 'wimg'"
+    txt3 = "Prefix for the benchmark set weighted output images. If no value,"
+    txt3 += " images will start with \'wimg\'"
     bow.add_argument("--prefix", help=txt3, metavar="")
     #
     txt4 = "Suffix to be used in naming the output weighted images from the"
@@ -210,7 +212,7 @@ if __name__ == "__main__":
     bow.add_argument("--dir_w", help=txt5, metavar="")
     #
     txt6 = "Flag to normalize each image before combine. If no flag, images"
-    txt6 += " aren't normalized. Values: 0-median, 1-mean"
+    txt6 += " are not normalized. Values: 0-median, 1-mean"
     bow.add_argument("--norm", help=txt6, metavar="", type=int, choices=[0, 1])
     #
     val = bow.parse_args()
@@ -223,3 +225,5 @@ if __name__ == "__main__":
     #
     C = Construct(**kw)
     C.weight_image()
+    #
+    logging.info("Ended.")
