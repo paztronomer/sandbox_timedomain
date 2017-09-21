@@ -6,6 +6,7 @@ import errno
 import socket
 import argparse
 import logging
+import uuid
 import numpy as np
 import pandas as pd
 import fitsio
@@ -186,10 +187,6 @@ class Construct():
 
 if __name__ == "__main__":
     #
-    logging.basicConfig(filename=logpath, level=logging.DEBUG, 
-                        format="%(asctime)s - %(levelname)s - %(message)s")
-    logging.info("Running on {0}".format(socket.gethostname()))
-    #
     h = "Code to create weighted images, per night, per band."
     bow = argparse.ArgumentParser(description=h)
     # Positional
@@ -222,6 +219,11 @@ if __name__ == "__main__":
     kw["suffix_weight"] = val.suffix
     kw["dir_weighted"] = val.dir_w
     kw["norm"] = val.norm
+    #
+    auxrdm = str(uuid.uuid4()) + ".log"
+    logging.basicConfig(filename=auxrdm, level=logging.DEBUG, 
+                        format="%(asctime)s - %(levelname)s - %(message)s")
+    logging.info("Running on {0}".format(socket.gethostname()))
     #
     C = Construct(**kw)
     C.weight_image()
