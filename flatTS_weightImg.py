@@ -101,11 +101,6 @@ class Construct():
                         elif (self.norm == 1):
                             M_msk /= np.ma.mean(M_msk)
                             flag_norm = "mean"
-                        #============================
-                        #for compare_dflat_binned_fp
-                        #must remove the median norm
-                        # M /= np.median(M)
-                        #============================
                     else:
                         if (rootpath is not None):
                             auxfnm = os.path.join(rootpath, pth)
@@ -118,10 +113,6 @@ class Construct():
                             N_msk /= np.ma.median(N_msk)
                         elif (self.norm == 1):
                             N_msk /= np.ma.mean(N_msk)
-                        #============================
-                        #for compare_dflat_binned_fp
-                        #must remove the median norm
-                        #============================
                         M_msk = np.ma.dstack((M_msk, N_msk))
                 # Call the weighted images method
                 M_w = self.stat_cube(M_msk, (lambda: stat)())

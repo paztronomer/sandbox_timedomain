@@ -9,6 +9,7 @@ import time
 import argparse
 import copy
 import logging
+import uuid
 import pandas as pd
 import numpy as np
 import scipy.stats
@@ -18,7 +19,7 @@ logging.basicConfig(level=logging.DEBUG,
                     format='%(asctime)s - %(levelname)s - %(message)s')
 # For save to file
 if False:
-    logging.basicConfig(filename="info.log",
+    logging.basicConfig(filename= str(uuid.uuid4()) + ".log",
                         level=logging.DEBUG, 
                         format='%(asctime)s - %(levelname)s - %(message)s')
 # For print to file and save to file at same time
