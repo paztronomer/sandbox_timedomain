@@ -88,7 +88,7 @@ ccdnums = {
     'N31':  62
 }
 
-def main_aux(pathlist=None, ccd=None, coo=None, raw=None, extens=0, 
+def main_aux(pathlist=None, ccd=None, coo=None, raw=None, extens=None, 
              label=None, stamp=False, suffix=None):
     if (pathlist is not None):
         # Load the table, with no constraint on filetype, in case path
@@ -172,6 +172,8 @@ def main_aux(pathlist=None, ccd=None, coo=None, raw=None, extens=0,
             )
             logging.info('{0} saved'.format(tmp_csv))
         except:
+            e = sys.exc_info()[0]
+            logging.error(e)
             logging.info('File {0} could not be saved'.format(tmp_csv))
             os.remove(tmp_csv)
         # Delete the variable harboring the results 
@@ -303,9 +305,13 @@ if __name__ == '__main__':
     ecl.add_argument('--stamp', help=h5, action='store_true')
     h6 = 'Suffix to be used on the stamps, if saved'
     ecl.add_argument('--suffix', help=h6, metavar='')
+    aux_ext = 'SCI'
+    h7 = 'Extension to read from the FITS. Default : {0}'.format(aux_ext)
+    ecl.add_argument('--ext', help=h7, metavar='extension', default=aux_ext)
     # Parser
     ecl = ecl.parse_args()
     #
     main_aux(pathlist=ecl.path, ccd=ecl.ccd, coo=ecl.coo, raw=ecl.raw, 
-             label=ecl.label, stamp=ecl.stamp, suffix=ecl.suffix)
+             label=ecl.label, stamp=ecl.stamp, suffix=ecl.suffix, 
+             extens=ecl.ext)
 
