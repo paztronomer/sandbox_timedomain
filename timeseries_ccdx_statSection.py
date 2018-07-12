@@ -132,7 +132,8 @@ def main_aux(pathlist=None, ccd=None, coo=None, raw=None, extens=None,
               ('min', 'i8'), ('max', 'i8'),
               ('mad', 'f8'), ('rms', 'f8'),
               ('nite', 'i8'), ('expnum', 'i8'), 
-              ('exptime', 'i8'), ('band', '|S10'),]
+              ('exptime', 'i8'), ('band', '|S10'),
+              ('mjd', 'f8'),]
     # Construct the lists to open each image
     uband = np.unique(tab['band'])
     for b in uband:
@@ -168,7 +169,7 @@ def main_aux(pathlist=None, ccd=None, coo=None, raw=None, extens=None,
             np.savetxt(
                 tmp_csv, r_struc, delimiter=',', 
                 header=','.join(r_struc.dtype.names),
-                fmt='%.4f,%.4f,%.4f,%i,%i,%.4f,%.4f,%i,%i,%i,%s'
+                fmt='%.4f,%.4f,%.4f,%i,%i,%.4f,%.4f,%i,%i,%i,%s,%f'
             )
             logging.info('{0} saved'.format(tmp_csv))
         except:
@@ -199,10 +200,10 @@ def stat_section(y_list):
     - stamp: boolean indicatinf wether to save or not a NPY file of the 
     section, inside the stamps/ folder
     Returns
-    - a tuple to be used in constructing a structured array
+    - a tuple of the results, to be used in constructing a structured array. 
     '''
     path, coo, ext, raw, nite, expnum, exptime, band, stamp, suf = y_list 
-    m = fits_section(path, coo, ext, raw)
+    m, header = fits_section(path, coo, ext, raw)
     # Normalizing by exposure time
     m = m / exptime
     if stamp:
@@ -225,8 +226,8 @@ def stat_section(y_list):
     f1 = lambda x: [ np.mean(x), np.median(x), np.std(x), np.min(x), 
                      np.max(x), np.median(np.abs( x - np.median(x) )), 
                      np.sqrt(np.mean(np.square( x.ravel() ))) ]
-    aux = f1(m) + [nite, expnum, exptime, band]
-    return [tuple(aux), m]
+    aux = f1(m) + [nite, expnum, exptime, band, header['MJD-OBS']]
+    return tuple(aux)
 
 def fits_section(fname, coo, ext, raw):
     ''' Function to read section of the CCD, based in input coordinates. For
@@ -277,14 +278,17 @@ def fits_section(fname, coo, ext, raw):
         return sec
     else:
         sec = np.copy(fits[ext][y0 : y1 + 1, x0 : x1 + 1])
+        hdr = fits[ext].read_header()
         fits.close()
-        return sec
+        return [sec, hdr]
 
 if __name__ == '__main__':
     
     hgral = 'Time Series constructor. Calculates basic statistics for a'
     hgral += ' section of the CCD, for either raw or processed images.'
-    hgral += ' Normalized by exposure time.'
+    hgral += ' Normalized by exposure time. The output will be a table'
+    hgral += ' with columns: mean,median,std,min,max,mad,rms,nite,expnum,'
+    hgral += 'exptime,band,mjd'
     ecl = argparse.ArgumentParser(description=hgral)
     h0 = 'Table of night, expnum, band, exptime, and path to images'
     h0 += ' for which stats should be calculated. Please use column names:'
